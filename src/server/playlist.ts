@@ -23,12 +23,30 @@ async function download(source: string): Promise<string> {
     // A local file. Only the server's own PLAYLIST_URL setting can point here.
     return fs.readFile(source, 'utf8')
   }
-  const res = await safeFetch(source, {
-    headers: { 'User-Agent': config.defaultUserAgent },
-    signal: AbortSignal.timeout(60_000),
-  })
-  if (!res.ok) throw new Error(`Playlist download failed: HTTP ${res.status}`)
-  return res.text()
+  let lastError: unknown
+  for (const url of [source, mirrorOf(source)].filter((u): u is string => !!u)) {
+    try {
+      const res = await safeFetch(url, {
+        headers: { 'User-Agent': config.defaultUserAgent },
+        signal: AbortSignal.timeout(60_000),
+      })
+      if (!res.ok) throw new Error(`Playlist download failed: HTTP ${res.status}`)
+      return await res.text()
+    } catch (err) {
+      lastError = err
+      console.warn(`[playlist] ${url}: ${(err as Error).message}`)
+    }
+  }
+  throw lastError
+}
+
+/**
+ * iptv-org's GitHub Pages files also exist in the repo's gh-pages branch, served by
+ * raw.githubusercontent.com. Used when github.io can't be reached.
+ */
+export function mirrorOf(url: string): string | undefined {
+  const prefix = 'https://iptv-org.github.io/iptv/'
+  return url.startsWith(prefix) ? `https://raw.githubusercontent.com/iptv-org/iptv/gh-pages/${url.slice(prefix.length)}` : undefined
 }
 
 async function build(source: string): Promise<ChannelData> {
