@@ -9,7 +9,8 @@ A web app for browsing, filtering and playing the public IPTV channels in the
   elsewhere, and regions that include your home country appear at the top. The home country can be changed in Settings.
 - **TV guide:** a scrollable grid of what's on for the next 24 hours, "on now" in every channel row, and
   now/next with descriptions under the player.
-- Filters by category and status (geo-blocked, part-time, failed for you, has TV listings), with instant search.
+- **Category chips** (News, Sports, Movies, Kids…) above the channel list and the guide. Pick several to see channels in any of them.
+- Filters by status (geo-blocked, part-time, failed for you, has TV listings), with instant search.
 - Plays HLS in the browser with [hls.js](https://github.com/video-dev/hls.js). If a stream fails, the player moves on to the channel's next one.
 - Includes favorites, recently watched, previous/next channel, a random channel button and arrow-key navigation in the list.
 - A built-in **relay** fetches streams through the server, so channels play even when the stream server blocks

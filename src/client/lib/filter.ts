@@ -6,7 +6,8 @@ export type View = 'all' | 'favorites' | 'recent'
 
 export interface Filters {
   search: string
-  category: string | null
+  /** Channels matching any of these categories are shown. Empty means all. */
+  categories: string[]
   region: string | null
   country: string | null
   view: View
@@ -19,7 +20,7 @@ export interface Filters {
 /** No filters at all. "Clear filters" goes back to this. */
 export const emptyFilters: Filters = {
   search: '',
-  category: null,
+  categories: [],
   region: null,
   country: null,
   view: 'all',
@@ -27,6 +28,16 @@ export const emptyFilters: Filters = {
   hideNot247: false,
   hideFailed: false,
   withGuide: false,
+}
+
+/** Fills in fields missing from filters saved by an older version of the app. */
+export function normalizeFilters(saved: Partial<Filters> & { category?: string | null }): Filters {
+  const f = { ...emptyFilters, ...saved }
+  if (!Array.isArray(f.categories)) f.categories = []
+  // Older versions stored a single category.
+  if (saved.category && !f.categories.length) f.categories = [saved.category]
+  delete (f as { category?: unknown }).category
+  return f
 }
 
 /** What a first-time visitor sees: channels from their home country. */
@@ -71,7 +82,7 @@ export function filterChannels(
   }
 
   const out = list.filter(ch => {
-    if (!skip.category && f.category && !ch.categories.includes(f.category)) return false
+    if (!skip.category && f.categories.length && !f.categories.some(c => ch.categories.includes(c))) return false
     if (!skip.region && f.region && !inRegion(ch.country, f.region)) return false
     if (!skip.country && f.country && ch.country !== f.country) return false
     if (f.withGuide && !ctx.guide.has(ch.id)) return false

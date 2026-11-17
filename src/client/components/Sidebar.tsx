@@ -16,6 +16,10 @@ interface Props {
   guideCount: number | null
 }
 
+export function toggle(list: string[], item: string): string[] {
+  return list.includes(item) ? list.filter(x => x !== item) : [...list, item]
+}
+
 function label(cat: string) {
   return cat === UNCATEGORIZED ? 'Uncategorized' : cat
 }
@@ -143,14 +147,15 @@ export function Sidebar({
 
       <details className="side-section" open>
         <summary>Category</summary>
-        <button className={`side-item ${filters.category === null ? 'active' : ''}`} onClick={() => set('category', null)}>
+        <button className={`side-item ${filters.categories.length === 0 ? 'active' : ''}`} onClick={() => set('categories', [])}>
           <span>Any category</span>
         </button>
         {categories.map(([cat, n]) => (
           <button
             key={cat}
-            className={`side-item ${filters.category === cat ? 'active' : ''}`}
-            onClick={() => set('category', filters.category === cat ? null : cat)}
+            className={`side-item ${filters.categories.includes(cat) ? 'active' : ''}`}
+            aria-pressed={filters.categories.includes(cat)}
+            onClick={() => set('categories', toggle(filters.categories, cat))}
           >
             <span>{label(cat)}</span>
             <span className="count">{n.toLocaleString()}</span>

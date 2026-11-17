@@ -8,7 +8,8 @@ import { Settings } from './components/Settings'
 import { Sidebar } from './components/Sidebar'
 import { fetchDefaultPlaylistUrl, fetchPlaylist } from './lib/api'
 import { EpgProvider, useEpg } from './lib/epg'
-import { countBy, emptyFilters, filterChannels, initialFilters, type Filters } from './lib/filter'
+import { CategoryChips } from './components/CategoryChips'
+import { countBy, emptyFilters, filterChannels, initialFilters, normalizeFilters, type Filters } from './lib/filter'
 import { useStreamHealth } from './lib/health'
 import { useStoredState } from './lib/storage'
 
@@ -88,7 +89,7 @@ function Shell(props: ShellProps) {
   const [homeCountry, setHomeCountry] = useStoredState('homeCountry', DEFAULT_HOME)
   const [storedFilters, setFilters] = useStoredState<Filters>('filters', initialFilters(DEFAULT_HOME))
   // Saved filters from an older version may be missing newer fields.
-  const filters = useMemo(() => ({ ...emptyFilters, ...storedFilters }), [storedFilters])
+  const filters = useMemo(() => normalizeFilters(storedFilters), [storedFilters])
   const [favorites, setFavorites] = useStoredState<string[]>('favorites', [])
   const [recent, setRecent] = useStoredState<string[]>('recent', [])
   const [mode, setMode] = useStoredState<PlaybackMode>('playbackMode', 'auto')
@@ -164,7 +165,7 @@ function Shell(props: ShellProps) {
   }
 
   const activeFilterCount =
-    (filters.category ? 1 : 0) +
+    (filters.categories.length ? 1 : 0) +
     (filters.region ? 1 : 0) +
     (filters.country ? 1 : 0) +
     (filters.hideGeoBlocked ? 1 : 0) +
@@ -211,7 +212,7 @@ function Shell(props: ShellProps) {
           type="search"
           placeholder={`Search ${channels.length.toLocaleString()} channels`}
           value={filters.search}
-          onChange={e => setFilters(f => ({ ...emptyFilters, ...f, search: e.target.value }))}
+          onChange={e => setFilters(f => ({ ...normalizeFilters(f), search: e.target.value }))}
         />
         <button className="btn ghost settings-btn" onClick={() => setSettingsOpen(true)} aria-label="Settings">
           <span aria-hidden>⚙</span>
@@ -221,7 +222,7 @@ function Shell(props: ShellProps) {
 
       <Sidebar
         filters={filters}
-        setFilters={fn => setFilters(f => fn({ ...emptyFilters, ...f }))}
+        setFilters={fn => setFilters(f => fn(normalizeFilters(f)))}
         categoryCounts={categoryCounts}
         countryCounts={countryCounts}
         allCountryCounts={allCountryCounts}
@@ -233,6 +234,13 @@ function Shell(props: ShellProps) {
 
       {view === 'guide' ? (
         <main className="content guide-content">
+          {!listBody && (
+            <CategoryChips
+              selected={filters.categories}
+              counts={categoryCounts}
+              onChange={categories => setFilters(f => ({ ...normalizeFilters(f), categories }))}
+            />
+          )}
           {listBody ?? (
             <Guide
               channels={guideChannels}
@@ -283,6 +291,13 @@ function Shell(props: ShellProps) {
                 </button>
               </span>
             </div>
+            {!listBody && (
+              <CategoryChips
+              selected={filters.categories}
+              counts={categoryCounts}
+              onChange={categories => setFilters(f => ({ ...normalizeFilters(f), categories }))}
+            />
+            )}
             {listBody ?? (
               <ChannelList
                 channels={visible}

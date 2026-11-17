@@ -423,6 +423,7 @@ code {
 
 .list-panel {
   grid-area: list;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   min-height: 0;
@@ -624,7 +625,7 @@ code {
 /* Medium screens: player above the list */
 @media (max-width: 1100px) {
   .content {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
     grid-template-rows: auto minmax(0, 1fr);
     grid-template-areas: 'player' 'list';
   }
@@ -643,7 +644,7 @@ code {
 /* Small screens: filters become a drawer */
 @media (max-width: 760px) {
   .app {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
     grid-template-areas: 'top' 'main';
   }
   .only-mobile {
@@ -860,7 +861,8 @@ code {
 
 .guide-content {
   grid-template-columns: minmax(0, 1fr);
-  grid-template-areas: 'guide';
+  grid-template-rows: auto minmax(0, 1fr);
+  grid-template-areas: none;
 }
 .guide {
   position: relative;
@@ -1144,4 +1146,52 @@ code {
   .gd-actions {
     flex-direction: row;
   }
+}
+
+/* Category chips */
+
+.chips {
+  display: flex;
+  gap: 6px;
+  padding: 8px 12px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  border-bottom: 1px solid var(--border);
+  background: var(--panel);
+  flex: none;
+}
+.chips::-webkit-scrollbar {
+  display: none;
+}
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: none;
+  height: 30px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--panel-2);
+  font-size: 13px;
+  font-weight: 550;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.chip:hover:not(:disabled) {
+  border-color: var(--accent);
+}
+.chip.on {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+.chip:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.chip-count {
+  font-size: 11px;
+  opacity: 0.7;
+  font-variant-numeric: tabular-nums;
 }
