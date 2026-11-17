@@ -4,8 +4,10 @@ import { fileURLToPath } from 'node:url'
 import compression from 'compression'
 import express from 'express'
 import { config } from './config.js'
+import { builtInCoverage, extraCoverage, getProgrammes } from './epg.js'
 import { getPlaylist } from './playlist.js'
 import { RELAY_PATH, relayHandler } from './proxy.js'
+import type { EpgRequest, EpgResponse } from '../shared/epg.js'
 
 export function createApp() {
   const app = express()
@@ -35,6 +37,49 @@ export function createApp() {
     } catch (err) {
       console.error('[playlist]', err)
       res.status(502).json({ error: (err as Error).message || 'Could not load playlist' })
+    }
+  })
+
+  /** Extra XMLTV sources: the playlist's own x-tvg-url, the server's EPG_URLS, then the user's. */
+  const extraSources = (playlistEpg: string[], fromClient: unknown): string[] => {
+    const user = (Array.isArray(fromClient) ? fromClient : typeof fromClient === 'string' ? fromClient.split(',') : [])
+      .map(s => String(s).trim())
+      .filter(s => /^https?:\/\//i.test(s))
+    return [...new Set([...playlistEpg, ...config.extraEpgUrls, ...user])].slice(0, 10)
+  }
+
+  const playlistParam = (v: unknown) => (typeof v === 'string' && /^https?:\/\//i.test(v.trim()) ? v.trim() : undefined)
+
+  app.get('/api/epg/coverage', compress, async (req, res) => {
+    try {
+      const data = await getPlaylist(playlistParam(req.query.url) ?? config.defaultPlaylistUrl)
+      const sources = extraSources(data.epgUrls, req.query.sources)
+      const [builtIn, extra] = await Promise.all([
+        builtInCoverage(data.channels).catch(() => [] as string[]),
+        sources.length ? extraCoverage(data.channels, sources) : Promise.resolve([] as string[]),
+      ])
+      res.setHeader('Cache-Control', 'private, max-age=600')
+      res.json({ ids: [...new Set([...builtIn, ...extra])] })
+    } catch (err) {
+      res.status(502).json({ error: (err as Error).message })
+    }
+  })
+
+  app.post('/api/epg', express.json({ limit: '256kb' }), compress, async (req, res) => {
+    const body = (req.body ?? {}) as Partial<EpgRequest> & { sources?: unknown }
+    const ids = Array.isArray(body.ids) ? body.ids.filter((x): x is string => typeof x === 'string').slice(0, 500) : []
+    const now = Date.now()
+    const from = Number.isFinite(body.from) ? Number(body.from) : now - 3600_000
+    const to = Number.isFinite(body.to) ? Math.min(Number(body.to), from + 48 * 3600_000) : now + 12 * 3600_000
+    try {
+      const data = await getPlaylist(playlistParam(body.playlistUrl) ?? config.defaultPlaylistUrl)
+      const wanted = new Set(ids)
+      const channels = data.channels.filter(c => wanted.has(c.id))
+      const programmes = await getProgrammes(channels, from, to, extraSources(data.epgUrls, body.sources))
+      res.json({ programmes } satisfies EpgResponse)
+    } catch (err) {
+      console.error('[epg]', err)
+      res.status(502).json({ error: (err as Error).message })
     }
   })
 

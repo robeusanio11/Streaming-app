@@ -17,6 +17,24 @@ export const config = {
   defaultUserAgent:
     process.env.RELAY_USER_AGENT ??
     'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36',
+  /**
+   * iptv-org's channel-to-guide mapping. The second URL is the same file served from GitHub,
+   * used if the first can't be reached.
+   */
+  guidesJsonUrls: (
+    process.env.GUIDES_JSON_URL ??
+    'https://iptv-org.github.io/api/guides.json,https://raw.githubusercontent.com/iptv-org/api/gh-pages/guides.json'
+  )
+    .split(',')
+    .map(s => s.trim())
+    .filter(Boolean),
+  /** Base URL of the XMLTV files published by i.mjh.nz. */
+  mjhBaseUrl: process.env.MJH_BASE_URL ?? 'https://raw.githubusercontent.com/matthuisman/i.mjh.nz/master',
+  /** Extra XMLTV guide URLs (comma-separated). They're matched to channels by tvg-id or name. */
+  extraEpgUrls: (process.env.EPG_URLS ?? '')
+    .split(',')
+    .map(s => s.trim())
+    .filter(Boolean),
   /** How long to wait for upstream response headers. */
   upstreamTimeoutMs: Number(process.env.UPSTREAM_TIMEOUT_MS ?? 15_000),
 }

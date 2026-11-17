@@ -2,20 +2,34 @@ import { useMemo, useState } from 'react'
 import { UNCATEGORIZED } from '../../shared/channels'
 import { countryFlag, countryName } from '../lib/countries'
 import type { Filters, View } from '../lib/filter'
+import { regions, regionsContaining } from '../lib/regions'
 
 interface Props {
   filters: Filters
   setFilters: (f: (prev: Filters) => Filters) => void
   categoryCounts: Map<string, number>
   countryCounts: Map<string, number>
+  /** Channel counts per country with the region and country filters left out, for region totals. */
+  allCountryCounts: Map<string, number>
   viewCounts: Record<View, number>
+  homeCountry: string
+  guideCount: number | null
 }
 
 function label(cat: string) {
   return cat === UNCATEGORIZED ? 'Uncategorized' : cat
 }
 
-export function Sidebar({ filters, setFilters, categoryCounts, countryCounts, viewCounts }: Props) {
+export function Sidebar({
+  filters,
+  setFilters,
+  categoryCounts,
+  countryCounts,
+  allCountryCounts,
+  viewCounts,
+  homeCountry,
+  guideCount,
+}: Props) {
   const [countryQuery, setCountryQuery] = useState('')
 
   const categories = useMemo(
@@ -34,8 +48,19 @@ export function Sidebar({ filters, setFilters, categoryCounts, countryCounts, vi
     return [...countryCounts.entries()]
       .map(([code, n]) => ({ code, n, name: countryName(code) }))
       .filter(c => !q || c.name.toLowerCase().includes(q) || c.code.includes(q))
-      .sort((a, b) => a.name.localeCompare(b.name))
-  }, [countryCounts, countryQuery])
+      .sort((a, b) => (a.code === homeCountry ? -1 : b.code === homeCountry ? 1 : a.name.localeCompare(b.name)))
+  }, [countryCounts, countryQuery, homeCountry])
+
+  const regionCount = (countries: string[]) => {
+    let n = 0
+    for (const [code, count] of allCountryCounts) {
+      const iso = code === 'uk' ? 'gb' : code
+      if (countries.includes(iso)) n += count
+    }
+    return n
+  }
+  const nearby = homeCountry ? regionsContaining(homeCountry) : []
+  const others = regions.filter(r => !nearby.includes(r))
 
   const set = <K extends keyof Filters>(key: K, value: Filters[K]) => setFilters(f => ({ ...f, [key]: value }))
 
@@ -70,6 +95,50 @@ export function Sidebar({ filters, setFilters, categoryCounts, countryCounts, vi
           <input type="checkbox" checked={filters.hideFailed} onChange={e => set('hideFailed', e.target.checked)} />
           Hide channels that failed for me
         </label>
+        <label className="check">
+          <input type="checkbox" checked={filters.withGuide} onChange={e => set('withGuide', e.target.checked)} />
+          Only channels with TV listings
+          {guideCount !== null && <span className="count">{guideCount.toLocaleString()}</span>}
+        </label>
+      </details>
+
+      <details className="side-section" open>
+        <summary>Region</summary>
+        {homeCountry && (
+          <button
+            className={`side-item ${filters.country === homeCountry && !filters.region ? 'active' : ''}`}
+            onClick={() => setFilters(f => ({ ...f, region: null, country: homeCountry }))}
+          >
+            <span>
+              {countryFlag(homeCountry)} {countryName(homeCountry)} only
+            </span>
+            <span className="count">{(allCountryCounts.get(homeCountry) ?? 0).toLocaleString()}</span>
+          </button>
+        )}
+        <select
+          className="input small region-select"
+          aria-label="Region"
+          value={filters.region ?? ''}
+          onChange={e => setFilters(f => ({ ...f, region: e.target.value || null, country: null }))}
+        >
+          <option value="">Anywhere</option>
+          {nearby.length > 0 && (
+            <optgroup label={`Including ${countryName(homeCountry)}`}>
+              {nearby.map(r => (
+                <option key={r.code} value={r.code}>
+                  {r.name} ({regionCount(r.countries).toLocaleString()})
+                </option>
+              ))}
+            </optgroup>
+          )}
+          <optgroup label="Other regions">
+            {others.map(r => (
+              <option key={r.code} value={r.code}>
+                {r.name} ({regionCount(r.countries).toLocaleString()})
+              </option>
+            ))}
+          </optgroup>
+        </select>
       </details>
 
       <details className="side-section" open>
@@ -99,7 +168,7 @@ export function Sidebar({ filters, setFilters, categoryCounts, countryCounts, vi
           onChange={e => setCountryQuery(e.target.value)}
         />
         <button className={`side-item ${filters.country === null ? 'active' : ''}`} onClick={() => set('country', null)}>
-          <span>Any country</span>
+          <span>{filters.region ? 'Any country in region' : 'Any country'}</span>
         </button>
         <div className="country-list">
           {countries.map(c => (

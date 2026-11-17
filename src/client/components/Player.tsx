@@ -1,5 +1,5 @@
 import Hls, { type ErrorData } from 'hls.js'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import type { Channel, StreamSource } from '../../shared/channels'
 import { relayUrl } from '../../shared/relay'
 
@@ -17,6 +17,8 @@ interface Props {
   onResult: (url: string, ok: boolean) => void
   onPrev: () => void
   onNext: () => void
+  /** Shown under the stream details, e.g. the programme that's on now. */
+  children?: ReactNode
 }
 
 /** How long a stream gets to start playing before the next one is tried. */
@@ -66,7 +68,7 @@ type Status =
   | { kind: 'playing' }
   | { kind: 'failed'; message: string }
 
-export function Player({ channel, mode, onResult, onPrev, onNext }: Props) {
+export function Player({ channel, mode, onResult, onPrev, onNext, children }: Props) {
   const videoRef = useRef<HTMLVideoElement>(null)
   const [attemptIndex, setAttemptIndex] = useState(0)
   const [status, setStatus] = useState<Status>({ kind: 'idle' })
@@ -261,6 +263,7 @@ export function Player({ channel, mode, onResult, onPrev, onNext }: Props) {
             ))}
             {attempt && <span className="tag subtle">{attempt.viaRelay ? 'Via relay' : 'Direct'}</span>}
           </div>
+          {children}
         </div>
       )}
     </section>

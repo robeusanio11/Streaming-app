@@ -2,6 +2,8 @@ import { useVirtualizer } from '@tanstack/react-virtual'
 import { memo, useEffect, useRef } from 'react'
 import { UNCATEGORIZED, type Channel } from '../../shared/channels'
 import { countryFlag, countryName } from '../lib/countries'
+import { programmeAt } from '../../shared/epg'
+import { useEpg } from '../lib/epg'
 import { channelHealth, type HealthMap } from '../lib/health'
 import { ChannelLogo } from './ChannelLogo'
 
@@ -21,9 +23,11 @@ const Row = memo(function Row({
   selected,
   favorite,
   health,
+  onAir,
   onSelect,
   onToggleFavorite,
 }: {
+  onAir?: { title: string; progress: number }
   ch: Channel
   selected: boolean
   favorite: boolean
@@ -48,6 +52,15 @@ const Row = memo(function Row({
           {health !== 'unknown' && <span className={`dot ${health}`} title={health === 'ok' ? 'Played recently' : 'Failed recently'} />}
           {ch.name}
         </div>
+        {onAir ? (
+          <div className="row-onair" title={onAir.title}>
+            {ch.country && <span>{countryFlag(ch.country)}</span>}
+            <span className="row-onair-title">{onAir.title}</span>
+            <span className="mini-progress" aria-hidden>
+              <span style={{ width: `${onAir.progress * 100}%` }} />
+            </span>
+          </div>
+        ) : (
         <div className="row-sub">
           {ch.country && (
             <span title={countryName(ch.country)}>
@@ -56,6 +69,7 @@ const Row = memo(function Row({
           )}
           <span className="row-cats">{ch.categories.filter(c => c !== UNCATEGORIZED).join(', ')}</span>
         </div>
+        )}
       </div>
       <div className="row-side">
         {best && <span className="tag">{best}</span>}
@@ -85,6 +99,17 @@ export function ChannelList({ channels, selectedId, favorites, health, onSelect,
     estimateSize: () => ROW_HEIGHT,
     overscan: 10,
   })
+  const { get, request, now, version } = useEpg()
+  const items = virtualizer.getVirtualItems()
+  const visibleIds = items.map(i => channels[i.index]?.id).filter(Boolean).join('|')
+  useEffect(() => {
+    if (visibleIds) request(visibleIds.split('|'))
+  }, [visibleIds, request])
+
+  const onAirFor = (id: string) => {
+    const p = programmeAt(get(id), now)
+    return p ? { title: p.title, progress: (now - p.start) / (p.stop - p.start) } : undefined
+  }
 
   // Keep the playing channel in view when it is changed with previous/next.
   useEffect(() => {
@@ -107,9 +132,10 @@ export function ChannelList({ channels, selectedId, favorites, health, onSelect,
 
   return (
     <div ref={parentRef} className="list" role="listbox" tabIndex={0} onKeyDown={onKeyDown} aria-label="Channels">
-      <div style={{ height: virtualizer.getTotalSize(), position: 'relative' }}>
-        {virtualizer.getVirtualItems().map(item => {
+      <div style={{ height: virtualizer.getTotalSize(), position: 'relative' }} data-version={version}>
+        {items.map(item => {
           const ch = channels[item.index]
+          const onAir = onAirFor(ch.id)
           return (
             <div
               key={ch.id}
@@ -120,6 +146,7 @@ export function ChannelList({ channels, selectedId, favorites, health, onSelect,
                 selected={ch.id === selectedId}
                 favorite={favorites.has(ch.id)}
                 health={channelHealth(ch, health)}
+                onAir={onAir}
                 onSelect={onSelect}
                 onToggleFavorite={onToggleFavorite}
               />

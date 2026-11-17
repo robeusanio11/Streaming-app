@@ -1,32 +1,47 @@
 import type { Channel } from '../../shared/channels'
 import { channelHealth, type HealthMap } from './health'
+import { inRegion } from './regions'
 
 export type View = 'all' | 'favorites' | 'recent'
 
 export interface Filters {
   search: string
   category: string | null
+  region: string | null
   country: string | null
   view: View
   hideGeoBlocked: boolean
   hideNot247: boolean
   hideFailed: boolean
+  withGuide: boolean
 }
 
-export const defaultFilters: Filters = {
+/** No filters at all. "Clear filters" goes back to this. */
+export const emptyFilters: Filters = {
   search: '',
   category: null,
+  region: null,
   country: null,
   view: 'all',
   hideGeoBlocked: false,
   hideNot247: false,
   hideFailed: false,
+  withGuide: false,
 }
 
-interface Context {
+/** What a first-time visitor sees: channels from their home country. */
+export function initialFilters(homeCountry: string): Filters {
+  return { ...emptyFilters, country: homeCountry }
+}
+
+export interface FilterContext {
   favorites: string[]
   recent: string[]
   health: HealthMap
+  /** Ids of channels that have TV guide data. */
+  guide: Set<string>
+  /** Channels from this country are listed first. */
+  homeCountry: string
 }
 
 function normalize(s: string): string {
@@ -42,8 +57,8 @@ function allLabelled(ch: Channel, label: string): boolean {
 export function filterChannels(
   channels: Channel[],
   f: Filters,
-  ctx: Context,
-  skip: { category?: boolean; country?: boolean } = {},
+  ctx: FilterContext,
+  skip: { category?: boolean; country?: boolean; region?: boolean } = {},
 ): Channel[] {
   const terms = normalize(f.search).split(/\s+/).filter(Boolean)
   const favs = new Set(ctx.favorites)
@@ -55,9 +70,11 @@ export function filterChannels(
     list = ctx.recent.map(id => byId.get(id)).filter((c): c is Channel => !!c)
   }
 
-  return list.filter(ch => {
+  const out = list.filter(ch => {
     if (!skip.category && f.category && !ch.categories.includes(f.category)) return false
+    if (!skip.region && f.region && !inRegion(ch.country, f.region)) return false
     if (!skip.country && f.country && ch.country !== f.country) return false
+    if (f.withGuide && !ctx.guide.has(ch.id)) return false
     if (f.hideGeoBlocked && allLabelled(ch, 'Geo-blocked')) return false
     if (f.hideNot247 && allLabelled(ch, 'Not 24/7')) return false
     if (f.hideFailed && channelHealth(ch, ctx.health) === 'dead') return false
@@ -67,6 +84,13 @@ export function filterChannels(
     }
     return true
   })
+
+  // Home-country channels go first (the list is otherwise alphabetical). Recent keeps its order.
+  if (f.view !== 'recent' && !f.country && ctx.homeCountry) {
+    const home = out.filter(c => c.country === ctx.homeCountry)
+    if (home.length && home.length < out.length) return [...home, ...out.filter(c => c.country !== ctx.homeCountry)]
+  }
+  return out
 }
 
 export function countBy(channels: Channel[], key: (c: Channel) => string[]): Map<string, number> {
