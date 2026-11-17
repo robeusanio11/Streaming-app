@@ -41,7 +41,7 @@ npm start          # serves the app and API on http://127.0.0.1:8787
 | `PLAYLIST_TTL_HOURS` | `6` | How long a downloaded playlist is reused. It is cached in `.cache/`. |
 | `UPSTREAM_TIMEOUT_MS` | `15000` | How long the relay waits for a stream server to respond. |
 | `RELAY_USER_AGENT` | a desktop Chrome UA | User-Agent sent when a stream doesn't need a specific one. |
-| `EPG_URLS` | none | Extra XMLTV guide URLs, comma-separated. They're matched to channels by tvg-id, then by name. |
+| `EPG_URLS` | epgshare01 US guide | Extra XMLTV guide URLs, comma-separated. They're matched to channels by tvg-id, then by name. |
 | `GUIDES_JSON_URL` | iptv-org API, with a GitHub copy as backup | iptv-org's channel-to-guide mapping. |
 | `MJH_BASE_URL` | i.mjh.nz on GitHub | Where the built-in XMLTV files are downloaded from. |
 | `ALLOW_PRIVATE_HOSTS` | off | Lets the relay reach LAN/localhost addresses. Use only for testing. |

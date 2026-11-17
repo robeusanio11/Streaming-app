@@ -69,3 +69,9 @@ test('normalizeName ignores case, accents, punctuation and HD/TV suffixes', () =
   assert.equal(normalizeName('Télé-Québec HD'), normalizeName('tele quebec'))
   assert.equal(normalizeName('CBS News 24/7'), 'cbsnews247')
 })
+
+test('normalizeName drops bracketed regions', () => {
+  assert.equal(normalizeName('ESPN (United States) HD'), normalizeName('ESPN HD'))
+  assert.equal(normalizeName('ESPN 2 (United States) HD'), normalizeName('ESPN2 HD'))
+  assert.equal(normalizeName('Fox News [Geo-blocked]'), 'foxnews')
+})

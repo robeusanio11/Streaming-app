@@ -30,8 +30,12 @@ export const config = {
     .filter(Boolean),
   /** Base URL of the XMLTV files published by i.mjh.nz. */
   mjhBaseUrl: process.env.MJH_BASE_URL ?? 'https://raw.githubusercontent.com/matthuisman/i.mjh.nz/master',
-  /** Extra XMLTV guide URLs (comma-separated). They're matched to channels by tvg-id or name. */
-  extraEpgUrls: (process.env.EPG_URLS ?? '')
+  /**
+   * Extra XMLTV guide URLs (comma-separated). They're matched to channels by tvg-id or name.
+   * The default adds US cable channels (ESPN, CNN and so on) that i.mjh.nz doesn't cover.
+   * Set EPG_URLS to an empty string to turn it off.
+   */
+  extraEpgUrls: (process.env.EPG_URLS ?? 'https://epgshare01.online/epgshare01/epg_ripper_US2.xml.gz')
     .split(',')
     .map(s => s.trim())
     .filter(Boolean),

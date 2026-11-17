@@ -58,6 +58,8 @@ export function normalizeName(s: string): string {
     .normalize('NFD')
     .replace(/[̀-ͯ]/g, '')
     .toLowerCase()
+    // iptv-org adds a region in brackets ("ESPN (United States) HD") that guide files leave out.
+    .replace(/\([^)]*\)|\[[^\]]*\]/g, ' ')
     .replace(/\b(hd|sd|fhd|uhd|4k|tv|channel)\b/g, '')
     .replace(/[^a-z0-9]+/g, '')
 }
@@ -152,7 +154,17 @@ async function loadGuide(url: string): Promise<LoadedGuide> {
       const window = { from: Date.now() - 6 * 3600_000, to: Date.now() + 36 * 3600_000 }
       const parsed = parseXmltv(xml, window)
       const byName = new Map<string, string>()
-      for (const ch of parsed.channels) for (const n of ch.names) if (!byName.has(normalizeName(n))) byName.set(normalizeName(n), ch.id)
+      // Register plain names before bracketed ones, so "ESPN2 HD" wins over "ESPN2 (Alternate)",
+      // which normalises to the same key.
+      for (const bracketed of [false, true]) {
+        for (const ch of parsed.channels) {
+          for (const n of ch.names) {
+            if (/[([]/.test(n) !== bracketed) continue
+            const key = normalizeName(n)
+            if (key && !byName.has(key)) byName.set(key, ch.id)
+          }
+        }
+      }
       const guide: LoadedGuide = {
         loadedAt: Date.now(),
         window,
