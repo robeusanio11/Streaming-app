@@ -8,6 +8,10 @@ export const config = {
   /** How long a fetched playlist is reused before it is downloaded again. */
   playlistTtlMs: Number(process.env.PLAYLIST_TTL_HOURS ?? 6) * 3600_000,
   cacheDir: process.env.CACHE_DIR ?? path.resolve('.cache'),
+  /** Where accounts and their saved channels are kept. Back this folder up; it isn't a cache. */
+  dataDir: process.env.DATA_DIR ?? path.resolve('data'),
+  /** Express "trust proxy" setting, e.g. "1" or "loopback". Set it when running behind a reverse proxy. */
+  trustProxy: process.env.TRUST_PROXY ?? '',
   /**
    * The relay refuses private, loopback and link-local addresses so it can't be used to reach
    * the host's internal network. Set ALLOW_PRIVATE_HOSTS=1 only for local testing.

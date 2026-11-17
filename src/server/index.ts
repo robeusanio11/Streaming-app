@@ -3,15 +3,19 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import compression from 'compression'
 import express from 'express'
+import { authRouter } from './auth.js'
 import { config } from './config.js'
 import { builtInCoverage, extraCoverage, getProgrammes } from './epg.js'
 import { getPlaylist } from './playlist.js'
 import { RELAY_PATH, relayHandler } from './proxy.js'
+import { UserStore } from './users.js'
 import type { EpgRequest, EpgResponse } from '../shared/epg.js'
 
-export function createApp() {
+export function createApp(opts: { dataDir?: string } = {}) {
   const app = express()
   app.disable('x-powered-by')
+  // Behind a reverse proxy, this makes req.secure and req.ip reflect the real client.
+  if (config.trustProxy) app.set('trust proxy', /^\d+$/.test(config.trustProxy) ? Number(config.trustProxy) : config.trustProxy)
 
   // Compress the API, but not the relay: video is already compressed, and buffering it adds latency.
   const compress = compression()
@@ -19,6 +23,8 @@ export function createApp() {
   app.get('/api/health', (_req, res) => {
     res.json({ ok: true })
   })
+
+  app.use('/api', authRouter(new UserStore(opts.dataDir ?? config.dataDir)))
 
   app.get('/api/config', (_req, res) => {
     res.json({ defaultPlaylistUrl: config.defaultPlaylistUrl })

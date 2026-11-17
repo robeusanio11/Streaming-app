@@ -695,6 +695,102 @@ code {
   }
 }
 
+/* Account */
+
+.account-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 180px;
+}
+.account-btn .settings-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.account-btn.placeholder {
+  width: 36px;
+}
+.account-btn.has-error {
+  border-color: var(--warn);
+}
+.avatar {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #fff;
+  font-weight: 700;
+  font-size: 18px;
+}
+.avatar.small {
+  width: 24px;
+  height: 24px;
+  font-size: 12px;
+}
+.account {
+  width: min(440px, calc(100vw - 32px));
+}
+.account-body {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 20px;
+}
+.account-body h2 {
+  margin: 0;
+  font-size: 18px;
+}
+.account-id {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.account-id > div {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.account-id strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.account-tabs {
+  align-self: flex-start;
+}
+.sync {
+  margin: 0;
+}
+.sync.error,
+.form-error {
+  color: var(--bad);
+}
+.form-error {
+  margin: 0;
+  font-size: 13px;
+}
+.actions.spread {
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.danger-zone {
+  padding: 14px;
+  border: 1px solid var(--bad);
+  border-radius: var(--radius);
+}
+.btn.danger {
+  background: var(--bad);
+  border-color: var(--bad);
+  color: #fff;
+}
+.danger-link {
+  color: var(--bad);
+}
+
 /* Tabs */
 
 .settings-btn {
@@ -1115,7 +1211,8 @@ code {
   .hide-mobile {
     display: none;
   }
-  .settings-btn {
+  .settings-btn,
+  .account-btn {
     padding: 0 10px;
   }
   .tab {

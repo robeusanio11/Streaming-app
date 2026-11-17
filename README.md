@@ -44,6 +44,8 @@ npm start          # serves the app and API on http://127.0.0.1:8787
 | `EPG_URLS` | epgshare01 US guide | Extra XMLTV guide URLs, comma-separated. They're matched to channels by tvg-id, then by name. |
 | `GUIDES_JSON_URL` | iptv-org API, with a GitHub copy as backup | iptv-org's channel-to-guide mapping. |
 | `MJH_BASE_URL` | i.mjh.nz on GitHub | Where the built-in XMLTV files are downloaded from. |
+| `DATA_DIR` | `data/` | Where accounts and their saved channels are stored (`accounts.json`). Back it up; it isn't a cache. |
+| `TRUST_PROXY` | off | Set when running behind a reverse proxy (e.g. `1`), so secure cookies and sign-in limits see the real client. |
 | `ALLOW_PRIVATE_HOSTS` | off | Lets the relay reach LAN/localhost addresses. Use only for testing. |
 
 Users can also choose another playlist URL and a playback mode (automatic, always relay, never relay)
@@ -67,6 +69,7 @@ browser ──/api/relay?url=…&ref=…&ua=…──▶ server ──▶ stream
 | `src/server/epg.ts`, `xmltv.ts` | TV guide: channel mapping, cached XMLTV downloads, parsing |
 | `src/client/lib/regions.json` | iptv-org's region definitions (CC0), bundled with the app |
 | `src/server/net.ts` | Blocks private and loopback addresses, including on every redirect hop |
+| `src/server/users.ts`, `auth.ts` | Accounts: password hashing, sessions, saved channels, sign-in limits |
 | `src/client/` | React UI: virtualized channel list, filters and player with failover |
 
 In **automatic** mode the player tries a stream directly first when the browser is able to, then through the relay.
@@ -94,6 +97,27 @@ Many other channels have listings only on sites like tvtv.us and tvpassport.com.
 |---|---|
 | `GET /api/epg/coverage` | IDs of channels that have listings |
 | `POST /api/epg` `{ ids, from, to }` | Programmes for those channels in that time range |
+
+## Accounts
+
+Signing in is optional. Guests keep favourites and recently watched channels in the browser, as before.
+With an account they're saved on the server and follow the user to any browser they sign in on. When
+someone signs in, whatever that browser had saved is merged into the account, then cleared from the browser.
+
+- Passwords are hashed with scrypt; sessions are random tokens in an `HttpOnly`, `SameSite=Lax` cookie
+  that lasts 30 days. The server stores only a hash of each token.
+- Changes must be sent as JSON, which blocks cross-site form posts.
+- Sign-in is blocked for 15 minutes after 10 wrong passwords for a username, or 50 from one address.
+- Serve the app over HTTPS if it's reachable beyond your own machine; the cookie is marked `Secure` when it is.
+- There is no password reset (there are no email addresses). Deleting `data/accounts.json` removes every account.
+
+| Endpoint | Purpose |
+|---|---|
+| `GET /api/auth/me` | The signed-in user and their saved channels, or `{ user: null }` |
+| `POST /api/auth/register`, `/login` `{ username, password }` | Create an account or sign in |
+| `POST /api/auth/logout` | Sign out this browser |
+| `PUT /api/library` `{ favorites?, recent? }` | Save the signed-in user's channels |
+| `DELETE /api/auth/account` `{ password }` | Delete the account |
 
 ## Known limitations
 

@@ -1,11 +1,13 @@
 import { useCallback, useDeferredValue, useEffect, useMemo, useState } from 'react'
 import type { Channel, ChannelData } from '../shared/channels'
+import { AccountButton, AccountDialog } from './components/Account'
 import { ChannelList } from './components/ChannelList'
 import { Guide } from './components/Guide'
 import { NowNext } from './components/NowNext'
 import { Player, type PlaybackMode } from './components/Player'
 import { Settings } from './components/Settings'
 import { Sidebar } from './components/Sidebar'
+import { AccountProvider, useAccount } from './lib/account'
 import { fetchDefaultPlaylistUrl, fetchPlaylist } from './lib/api'
 import { EpgProvider, useEpg } from './lib/epg'
 import { CategoryChips } from './components/CategoryChips'
@@ -54,20 +56,22 @@ export function App() {
   }, [load])
 
   return (
-    <EpgProvider playlistUrl={playlistUrl} sources={epgSources} ready={!!data && !loading}>
-      <Shell
-        data={data}
-        loading={loading}
-        refreshing={refreshing}
-        error={error}
-        reload={load}
-        playlistUrl={playlistUrl}
-        setPlaylistUrl={setPlaylistUrl}
-        defaultUrl={defaultUrl}
-        epgSources={epgSources}
-        setEpgSources={setEpgSources}
-      />
-    </EpgProvider>
+    <AccountProvider>
+      <EpgProvider playlistUrl={playlistUrl} sources={epgSources} ready={!!data && !loading}>
+        <Shell
+          data={data}
+          loading={loading}
+          refreshing={refreshing}
+          error={error}
+          reload={load}
+          playlistUrl={playlistUrl}
+          setPlaylistUrl={setPlaylistUrl}
+          defaultUrl={defaultUrl}
+          epgSources={epgSources}
+          setEpgSources={setEpgSources}
+        />
+      </EpgProvider>
+    </AccountProvider>
   )
 }
 
@@ -90,13 +94,13 @@ function Shell(props: ShellProps) {
   const [storedFilters, setFilters] = useStoredState<Filters>('filters', initialFilters(DEFAULT_HOME))
   // Saved filters from an older version may be missing newer fields.
   const filters = useMemo(() => normalizeFilters(storedFilters), [storedFilters])
-  const [favorites, setFavorites] = useStoredState<string[]>('favorites', [])
-  const [recent, setRecent] = useStoredState<string[]>('recent', [])
+  const { favorites, setFavorites, recent, setRecent } = useAccount()
   const [mode, setMode] = useStoredState<PlaybackMode>('playbackMode', 'auto')
   const [view, setView] = useStoredState<Mode>('view', 'watch')
   const [guideShowAll, setGuideShowAll] = useStoredState('guideShowAll', false)
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const [accountOpen, setAccountOpen] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const { health, record } = useStreamHealth()
   const { coverage, coverageLoaded } = useEpg()
@@ -214,6 +218,7 @@ function Shell(props: ShellProps) {
           value={filters.search}
           onChange={e => setFilters(f => ({ ...normalizeFilters(f), search: e.target.value }))}
         />
+        <AccountButton onClick={() => setAccountOpen(true)} />
         <button className="btn ghost settings-btn" onClick={() => setSettingsOpen(true)} aria-label="Settings">
           <span aria-hidden>⚙</span>
           <span className="settings-label">Settings</span>
@@ -315,6 +320,7 @@ function Shell(props: ShellProps) {
         </main>
       )}
 
+      <AccountDialog open={accountOpen} onClose={() => setAccountOpen(false)} />
       <Settings
         open={settingsOpen}
         onClose={() => setSettingsOpen(false)}
